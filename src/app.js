@@ -106,13 +106,32 @@ app.post('/new-transaction/:type', async (req,res) =>{
             userId: session.userId,
             type: type,
             value: value,
-            description: description
+            description: description,
+            date: Date.now()
         });
         return res.sendStatus(201);
     }catch (err){
         return res.status(500).send(err.message);
     } 
 });
+
+app.get('/my-transactions', async (req, res) =>{
+    //headers: {'Authorization': `Bearer ${infProfi[0].token}`}
+    const {authorization} = req.headers;
+    const token = authorization?.replace("Bearer ", "");
+    if(!token) return res.sendStatus(401);
+    try{
+        const session = await db.collection('sessions').findOne({token: token});
+        if(!session) return res.status(401).send('Token não corresponde a nenhuma sessão');
+        const transactions = await db.collection('transactions')
+        .find({userId: session.userId})
+        .sort({ date: -1 })
+        .toArray()
+        return res.status(200).send(transactions);
+    }catch(err){
+        return res.status(500).send(err.message);
+    }
+})
 
 const port = process.env.PORT || 5000;
 app.listen(port, () => {
