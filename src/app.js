@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import { MongoClient } from 'mongodb';
 import Joi from 'joi';
 import bcrypt from 'bcrypt';
+import {v4 as uuid} from 'uuid';
 
 dotenv.config();
 
@@ -32,7 +33,6 @@ app.post('/sign-up', async (req, res) => {
     const validation = newUserSchema.validate(req.body, {abortEarly: false});
     if(validation.error){
         const errors = validation.error.details.map(detail => detail.message);
-        console.log(errors);
         return res.status(422).send(errors);
     }
     try{
@@ -45,6 +45,33 @@ app.post('/sign-up', async (req, res) => {
         return res.status(500).send(err.message);
     }
 });
+
+app.post('/sign-in', async (req, res) =>{
+    //body; {email: 'xxx@email.com', password: 'ixzdfbhzdsjbnf'}
+    const {email, password} = req.body;
+    const userSchema = Joi.object({
+        email: Joi.string().email().required(),
+        password: Joi.string().required()
+    });
+    const validation = userSchema.validate(req.body, {abortEarly: false});
+    if(validation.error){
+        const errors = validation.error.details.map(detail => detail.message);
+        return res.status(422).send(errors);
+    }
+    try{
+        const user = await db.collection('users').findOne({email: email});
+        if(!user) return res.status(404).send({message: 'Email não cadastrado'});
+        if(bcrypt.compareSync(password, user.password)){
+            const token = uuid();
+            await db.collection('sessions').insertOne({userId: user._id, token: token});
+            return res.status(200).send({token: token});
+        }else{
+            return res.status(401).send({message: 'Senha inválida!'})
+        }
+    }catch (err){
+        return res.status(500).send(err.message);
+    }
+})
 
 const port = process.env.PORT || 5000;
 app.listen(port, () => {
