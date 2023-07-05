@@ -17,6 +17,7 @@ mongoClient.connect()
     })
     .catch((err) => console.log(err.message));
 
+//console.log(Number.isInteger(5.3));
 
 const app = express();
 app.use(cors());
@@ -72,6 +73,46 @@ app.post('/sign-in', async (req, res) =>{
         return res.status(500).send(err.message);
     }
 })
+
+app.post('/new-transaction/:type', async (req,res) =>{
+    //headers: {'Authorization': `Bearer ${infProfi[0].token}`}
+    //body: {value: 53.56, description: 'dinheiro para pagar a comida das criança'}
+    //params: {type: 'income' ou 'outcome'}
+    const {authorization} = req.headers;
+    const {value, description} = req.body;
+    const {type} = req.params
+    const token = authorization?.replace("Bearer ", "");
+
+    if (!token) return res.sendStatus(401);
+
+    if (Number.isInteger(value)) return res.status(422).send('O valor deve estar no formato correto (ex. 52.6)');
+
+    const transactionSchema = Joi.object({
+        value: Joi.number().positive().required(),
+        description: Joi.string().required(),
+        type: Joi.any().valid('income', 'outcome').required()
+    });
+
+    const validation = transactionSchema.validate({ ...req.body, type: type }, {abortEarly: false});
+    if(validation.error){
+        const errors = validation.error.details.map(detail => detail.message);
+        return res.status(422).send(errors);
+    }
+
+    try{
+        const session = await db.collection('sessions').findOne({token: token});
+        if(!session) return res.sendStatus(401);
+        await db.collection('transactions').insertOne({
+            userId: session.userId,
+            type: type,
+            value: value,
+            description: description
+        });
+        return res.sendStatus(201);
+    }catch (err){
+        return res.status(500).send(err.message);
+    } 
+});
 
 const port = process.env.PORT || 5000;
 app.listen(port, () => {
