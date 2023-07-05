@@ -21,7 +21,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-app.post('/cadastro', async (req, res) => {
+app.post('/sign-up', async (req, res) => {
     // body: {name: 'xxxx', email: ''aaa@ffff', password: 'xlcvbnipsaudebnj'}
     const {name, email, password} = req.body;
     const newUserSchema = Joi.object({
