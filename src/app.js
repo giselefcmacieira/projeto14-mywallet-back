@@ -129,7 +129,6 @@ app.get('/my-transactions', async (req, res) =>{
         .sort({ date: -1 })
         .toArray();
         transactions.map(transaction => {
-            delete transaction._id;
             delete transaction.userId;
         });
         return res.status(200).send(transactions);
