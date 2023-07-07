@@ -5,6 +5,7 @@ import { MongoClient } from 'mongodb';
 import Joi from 'joi';
 import bcrypt from 'bcrypt';
 import {v4 as uuid} from 'uuid';
+import dayjs from 'dayjs';
 
 dotenv.config();
 
@@ -38,7 +39,7 @@ app.post('/sign-up', async (req, res) => {
     }
     try{
         const user = await db.collection('users').findOne({email: email});
-        if(user) return res.status(409).send({message: 'O email já está cadastrado.'});
+        if(user) return res.status(409).send('O email já está cadastrado.');
         const passwordHash = bcrypt.hashSync(password, 10);
         await db.collection('users').insertOne({name: name, email: email, password: passwordHash});
         res.sendStatus(201);
@@ -61,13 +62,13 @@ app.post('/sign-in', async (req, res) =>{
     }
     try{
         const user = await db.collection('users').findOne({email: email});
-        if(!user) return res.status(404).send({message: 'Email não cadastrado'});
+        if(!user) return res.status(404).send('Email não cadastrado');
         if(bcrypt.compareSync(password, user.password)){
             const token = uuid();
             await db.collection('sessions').insertOne({userId: user._id, token: token});
-            return res.status(200).send({token: token});
+            return res.status(200).send({name: user.name, token: token});
         }else{
-            return res.status(401).send({message: 'Senha inválida!'})
+            return res.status(401).send('Senha inválida!')
         }
     }catch (err){
         return res.status(500).send(err.message);
@@ -107,7 +108,7 @@ app.post('/new-transaction/:type', async (req,res) =>{
             type: type,
             value: value,
             description: description,
-            date: Date.now()
+            date: dayjs().format('DD/MM')
         });
         return res.sendStatus(201);
     }catch (err){
@@ -126,7 +127,11 @@ app.get('/my-transactions', async (req, res) =>{
         const transactions = await db.collection('transactions')
         .find({userId: session.userId})
         .sort({ date: -1 })
-        .toArray()
+        .toArray();
+        transactions.map(transaction => {
+            delete transaction._id;
+            delete transaction.userId;
+        });
         return res.status(200).send(transactions);
     }catch(err){
         return res.status(500).send(err.message);
