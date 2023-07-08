@@ -137,6 +137,19 @@ app.get('/my-transactions', async (req, res) =>{
     }
 })
 
+app.delete('/sign-out', async (req,res) =>{
+    //headers: {'Authorization': `Bearer ${infProfi[0].token}`}
+    const {authorization} = req.headers;
+    const token = authorization?.replace("Bearer ", "");
+    try{
+        const result = db.collection('sessions').deleteOne({token: token});
+        if(result.deleteCount === 0) return res.sendStatus(404);
+        return res.status(200).send('Loguot realizado com sucesso!');
+    }catch (err){
+        res.status(500).send(err.message);
+    }
+})
+
 const port = process.env.PORT || 5000;
 app.listen(port, () => {
 	console.log(`Servidor rodando na porta ${port}`)
