@@ -108,7 +108,7 @@ app.post('/new-transaction/:type', async (req,res) =>{
             type: type,
             value: value,
             description: description,
-            date: dayjs().format('DD/MM')
+            date: Date.now()
         });
         return res.sendStatus(201);
     }catch (err){
